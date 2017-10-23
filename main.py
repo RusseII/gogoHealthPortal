@@ -1,27 +1,38 @@
-from flask import Flask
-from twilio.rest import Client
+from flask import Flask, request, session
+from twilio import twiml
+from twilio.rest import TwilioRestClient 
+from analyze import analyzeMsg
+import string
 
-
+SECRET_KEY = 'randomshit'
 app = Flask(__name__)
+app.config.from_object(__name__)
 
-# Your Account SID from twilio.com/console
-account_sid = "AC56409d1a92925652258306a3d332aa6e"
-# Your Auth Token from twilio.com/console
-auth_token = "6bbfaef7cee22796c0e3145557c79dfb"
+@app.route('/', methods = ['GET', 'POST'])
+def hello_world():
+    userInput = request.values.get('Body', None).lower().strip()
 
-client = Client(account_sid, auth_token)
+    userInput = [userInput.strip(string.punctuation) for x in userInput.split()][0]
+    # session.clear()
 
-message = client.messages.create(
-    to="+13309315881",
-    from_="+12169301335 ",
-    body="Hello from Python!")
+    # Increment the counter
+    counter = session.get('counter', 0)
+    counter += 1
 
-print(message.sid)
+    # Save the new counter value in the session
+    session['counter'] = counter
 
+    # put your own credentials here 
+    ACCOUNT_SID = "AC56409d1a92925652258306a3d332aa6e" 
+    AUTH_TOKEN = "6bbfaef7cee22796c0e3145557c79dfb" 
+    
+    client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN) 
 
-@app.route('/')
-def hello():
-    return "Hello World!"
+    # Build our reply
+    message = analyzeMsg(userInput, counter, session)
+
+    response = "<?xml version='1.0' encoding='UTF-8'?><Response><Message>" + message + "</Message></Response>"
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
